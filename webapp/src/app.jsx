@@ -25,7 +25,7 @@ const booksData = [
   { name: '3Ів', chapters: 1 }, { name: 'Юд', chapters: 1 }, { name: 'Об', chapters: 22 }
 ];
 
-export default function App() {
+export function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
   const [view, setView] = useState('books'); // 'books' або 'chapters'
   const [selections, setSelections] = useState({});
@@ -49,26 +49,35 @@ export default function App() {
     setView('chapters');
   };
 
+  // Оновлена функція для миттєвої реакції
   const handleChapterClick = (chapter) => {
-    const readChapters = selections[activeBook.name] || [];
-    let newReadChapters;
-    if (readChapters.includes(chapter)) {
-      newReadChapters = readChapters.filter(c => c !== chapter);
-    } else {
-      newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
-    }
-    const newSelections = { ...selections };
-    if (newReadChapters.length > 0) {
-      newSelections[activeBook.name] = newReadChapters;
-    } else {
-      delete newSelections[activeBook.name];
-    }
-    setSelections(newSelections);
-    try {
-      localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
-    } catch (error) {
-      console.error("Failed to save selections to localStorage", error);
-    }
+    // Використовуємо функціональну форму useState для надійного оновлення
+    setSelections(currentSelections => {
+      const readChapters = currentSelections[activeBook.name] || [];
+      let newReadChapters;
+
+      if (readChapters.includes(chapter)) {
+        newReadChapters = readChapters.filter(c => c !== chapter);
+      } else {
+        newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
+      }
+
+      const newSelections = { ...currentSelections };
+      if (newReadChapters.length > 0) {
+        newSelections[activeBook.name] = newReadChapters;
+      } else {
+        delete newSelections[activeBook.name];
+      }
+      
+      // Зберігаємо в localStorage одразу після розрахунку
+      try {
+        localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
+      } catch (error) {
+        console.error("Failed to save selections to localStorage", error);
+      }
+
+      return newSelections;
+    });
   };
   
   const handleBackToBooks = () => {
@@ -140,5 +149,3 @@ export default function App() {
     </div>
   );
 }
-
-
