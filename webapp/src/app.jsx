@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
+// Українські абревіатури та кількість розділів
 const booksData = [
   { name: 'Бут', chapters: 50 }, { name: 'Вих', chapters: 40 }, { name: 'Лев', chapters: 27 },
   { name: 'Чис', chapters: 36 }, { name: 'Втор', chapters: 34 }, { name: 'ІсНав', chapters: 24 },
@@ -25,12 +26,20 @@ const booksData = [
   { name: '3Ів', chapters: 1 }, { name: 'Юд', chapters: 1 }, { name: 'Об', chapters: 22 }
 ];
 
+const DAILY_GOAL = 4;
+
+// Повернено до звичайного оголошення функції
 export function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
-  const [view, setView] = useState('books'); // 'books' або 'chapters'
+  const [view, setView] = useState('books');
   const [selections, setSelections] = useState({});
+  const [dailyReads, setDailyReads] = useState(0);
+
+  // Функція для отримання сьогоднішньої дати у форматі YYYY-MM-DD
+  const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
   useEffect(() => {
+    // Завантаження загального прогресу
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
       if (savedSelections) {
@@ -39,6 +48,26 @@ export function App() {
     } catch (error) {
       console.error("Failed to parse selections from localStorage", error);
     }
+    
+    // Завантаження щоденного прогресу
+    try {
+      const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
+      const today = getTodayDateString();
+      if (savedDailyProgress) {
+        const { date, count } = JSON.parse(savedDailyProgress);
+        if (date === today) {
+          setDailyReads(count);
+        } else {
+          // Якщо дата не сьогоднішня, скидаємо лічильник
+          localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: 0 }));
+        }
+      } else {
+        localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: 0 }));
+      }
+    } catch (error) {
+      console.error("Failed to parse daily progress from localStorage", error);
+    }
+
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
     }
@@ -49,18 +78,27 @@ export function App() {
     setView('chapters');
   };
 
-  // Оновлена функція для миттєвої реакції
   const handleChapterClick = (chapter) => {
-    // Використовуємо функціональну форму useState для надійного оновлення
     setSelections(currentSelections => {
       const readChapters = currentSelections[activeBook.name] || [];
       let newReadChapters;
+      let dailyChange = 0;
 
       if (readChapters.includes(chapter)) {
         newReadChapters = readChapters.filter(c => c !== chapter);
+        dailyChange = -1; // Зменшуємо денний лічильник
       } else {
         newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
+        dailyChange = 1; // Збільшуємо денний лічильник
       }
+      
+      // Оновлюємо щоденний прогрес
+      setDailyReads(currentDailyReads => {
+          const newDailyCount = Math.max(0, currentDailyReads + dailyChange);
+          const today = getTodayDateString();
+          localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: newDailyCount }));
+          return newDailyCount;
+      });
 
       const newSelections = { ...currentSelections };
       if (newReadChapters.length > 0) {
@@ -69,7 +107,6 @@ export function App() {
         delete newSelections[activeBook.name];
       }
       
-      // Зберігаємо в localStorage одразу після розрахунку
       try {
         localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
       } catch (error) {
@@ -84,15 +121,32 @@ export function App() {
     setView('books');
   };
 
+  const stats = useMemo(() => {
+    const totalChapters = booksData.reduce((sum, book) => sum + book.chapters, 0);
+    const totalReadChapters = Object.values(selections).reduce((sum, chapters) => sum + chapters.length, 0);
+    const percentage = totalChapters > 0 ? (totalReadChapters / totalChapters) * 100 : 0;
+    return { totalChapters, totalReadChapters, percentage };
+  }, [selections]);
+
   const baseGridItemClasses = "aspect-square flex items-center justify-center rounded-lg border-2 bg-zinc-800 text-white cursor-pointer transition-all duration-200 hover:bg-zinc-700 active:scale-95";
 
   const renderBookView = () => (
     <>
+      <div className="w-full max-w-md flex justify-between items-center text-white mb-2">
+        {/* Оновлений заголовок з денною статистикою */}
+        <p className="text-sm text-gray-400">Сьогодні прочитано: {dailyReads} / {DAILY_GOAL}</p>
+        {/* Загальна статистика */}
+        <div className="text-right">
+          <p className="text-sm text-gray-400">
+            Всього: {stats.totalReadChapters} ({stats.percentage.toFixed(1)}%)
+          </p>
+        </div>
+      </div>
       <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
         {booksData.map((book) => {
           const readChapters = selections[book.name] || [];
           const totalChapters = book.chapters;
-          let borderColorClass = 'border-transparent'; // Стан за замовчуванням
+          let borderColorClass = 'border-transparent';
 
           if (readChapters.length > 0) {
             if (readChapters.length === totalChapters) {
