@@ -134,7 +134,9 @@ export function App() {
     <>
       <div className="w-full max-w-md flex justify-between items-center text-white mb-2">
         {/* Оновлений заголовок з денною статистикою */}
-        <p className="text-sm text-gray-400">Сьогодні прочитано: {dailyReads} / {DAILY_GOAL}</p>
+        <p className="text-sm text-gray-400">
+          Сьогодні прочитано: {dailyReads} / {DAILY_GOAL} {dailyReads >= DAILY_GOAL && '✅'}
+        </p>
         {/* Загальна статистика */}
         <div className="text-right">
           <p className="text-sm text-gray-400">
