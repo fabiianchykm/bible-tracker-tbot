@@ -1,5 +1,11 @@
 // File: src/App.jsx
-// Додано функціонал для позначення прочитаних розділів
+// Код переписано з використанням Tailwind CSS
+
+// ВАЖЛИВО: Цей код використовує класи Tailwind CSS.
+// Щоб він працював коректно без складного налаштування,
+// додайте цей рядок у <head> вашого файлу index.html:
+// <script src="https://cdn.tailwindcss.com"></script>
+// Це найпростіший спосіб уникнути помилок збірки, пов'язаних з Tailwind.
 
 import React, { useState, useEffect } from 'react';
 
@@ -29,14 +35,11 @@ const booksData = [
   { name: '3Ів', chapters: 1 }, { name: 'Юд', chapters: 1 }, { name: 'Об', chapters: 22 }
 ];
 
-export function App() {
+export  function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
   const [view, setView] = useState('books'); // 'books' або 'chapters'
-  
-  // Нова структура даних: { 'Бут': [1, 5, 10], 'Вих': [3], ... }
   const [selections, setSelections] = useState({});
 
-  // Завантажуємо збережені дані при першому запуску
   useEffect(() => {
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
@@ -46,39 +49,30 @@ export function App() {
     } catch (error) {
       console.error("Failed to parse selections from localStorage", error);
     }
-
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
     }
   }, []);
 
-  // Обробник кліку на книгу
   const handleBookClick = (book) => {
     setActiveBook(book);
     setView('chapters');
   };
 
-  // Обробник кліку на розділ (перемикач "прочитано")
   const handleChapterClick = (chapter) => {
     const readChapters = selections[activeBook.name] || [];
     let newReadChapters;
-
     if (readChapters.includes(chapter)) {
-      // Якщо розділ вже прочитаний, знімаємо позначку
       newReadChapters = readChapters.filter(c => c !== chapter);
     } else {
-      // Якщо не прочитаний, додаємо позначку
       newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
     }
-
     const newSelections = { ...selections };
     if (newReadChapters.length > 0) {
       newSelections[activeBook.name] = newReadChapters;
     } else {
-      // Якщо в книзі не залишилось прочитаних розділів, видаляємо ключ
       delete newSelections[activeBook.name];
     }
-    
     setSelections(newSelections);
     try {
       localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
@@ -87,25 +81,25 @@ export function App() {
     }
   };
   
-  // Повернення до вибору книг
   const handleBackToBooks = () => {
-      setView('books');
+    setView('books');
   };
 
-  // Рендеринг сітки з книгами
+  const baseGridItemClasses = "aspect-square flex items-center justify-center rounded-lg border-2 bg-zinc-800 text-white cursor-pointer transition-all duration-200 hover:bg-zinc-700 active:scale-95";
+
   const renderBookView = () => (
     <>
-      <div className="header">
-        <h1>Книги</h1>
-        <div style={{width: '50px'}}></div>
+      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+        <h1 className="text-xl">Книги</h1>
+        <div className="w-12"></div>
       </div>
-      <div className="gridContainer">
+      <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
         {booksData.map((book) => {
           const isStarted = selections[book.name] && selections[book.name].length > 0;
           return (
             <button
               key={book.name}
-              className={`gridItem ${isStarted ? 'started' : ''}`}
+              className={`${baseGridItemClasses} ${isStarted ? 'border-green-500' : 'border-transparent'}`}
               onClick={() => handleBookClick(book)}
             >
               {book.name}
@@ -116,23 +110,22 @@ export function App() {
     </>
   );
 
-  // Рендеринг сітки з розділами
   const renderChapterView = () => {
     const readChapters = selections[activeBook.name] || [];
     return (
       <>
-        <div className="header">
-          <button className="backButton" onClick={handleBackToBooks}>&lt; Назад</button>
-          <h1>{activeBook.name}</h1>
-          <div style={{width: '50px'}}></div>
+        <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+          <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
+          <h1 className="text-xl">{activeBook.name}</h1>
+          <div className="w-12"></div>
         </div>
-        <div className="gridContainer">
+        <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
           {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((chapter) => {
             const isRead = readChapters.includes(chapter);
             return (
               <button
                 key={chapter}
-                className={`gridItem ${isRead ? 'read' : ''}`}
+                className={`${baseGridItemClasses} border-transparent ${isRead ? 'bg-green-600' : 'bg-zinc-800'}`}
                 onClick={() => handleChapterClick(chapter)}
               >
                 {chapter}
@@ -145,33 +138,10 @@ export function App() {
   };
 
   return (
-    <div>
-      <style>{`
-        body { background-color: #1c1c1e; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .appContainer { display: flex; flex-direction: column; align-items: center; padding: 1rem; }
-        .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; color: white; margin-bottom: 1rem; }
-        .header h1 { font-size: 1.2rem; margin: 0; }
-        .goButton, .backButton { background: none; border: none; color: #007aff; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
-        .gridContainer { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; max-width: 400px; padding: 10px; box-sizing: border-box; }
-        .gridItem { background-color: #3a3a3c; border: 2px solid transparent; border-radius: 8px; padding: 12px 5px; text-align: center; font-size: 16px; color: #fff; cursor: pointer; transition: background-color 0.2s, transform 0.1s, border-color 0.2s; aspect-ratio: 1 / 1; display: flex; justify-content: center; align-items: center; }
-        .gridItem:hover { background-color: #5a5a5c; }
-        .gridItem:active { transform: scale(0.95); }
-        
-        /* Стиль для книги, в якій є прочитані розділи */
-        .gridItem.started {
-          border-color: #34c759; /* Зелена рамка */
-        }
-
-        /* Стиль для прочитаного розділу */
-        .gridItem.read {
-          background-color: #34c759; /* Зелений фон */
-          color: white;
-        }
-      `}</style>
-      
-      <div className="appContainer">
-        {view === 'books' ? renderBookView() : renderChapterView()}
-      </div>
+    <div className="bg-zinc-900 min-h-screen font-sans flex flex-col items-center p-4">
+      {view === 'books' ? renderBookView() : renderChapterView()}
     </div>
   );
 }
+
+export default App;
