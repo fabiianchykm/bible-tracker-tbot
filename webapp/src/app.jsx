@@ -1,15 +1,5 @@
-// File: src/App.jsx
-// Код переписано з використанням Tailwind CSS
-
-// ВАЖЛИВО: Цей код використовує класи Tailwind CSS.
-// Щоб він працював коректно без складного налаштування,
-// додайте цей рядок у <head> вашого файлу index.html:
-// <script src="https://cdn.tailwindcss.com"></script>
-// Це найпростіший спосіб уникнути помилок збірки, пов'язаних з Tailwind.
-
 import React, { useState, useEffect } from 'react';
 
-// Українські абревіатури та кількість розділів
 const booksData = [
   { name: 'Бут', chapters: 50 }, { name: 'Вих', chapters: 40 }, { name: 'Лев', chapters: 27 },
   { name: 'Чис', chapters: 36 }, { name: 'Втор', chapters: 34 }, { name: 'ІсНав', chapters: 24 },
@@ -35,7 +25,7 @@ const booksData = [
   { name: '3Ів', chapters: 1 }, { name: 'Юд', chapters: 1 }, { name: 'Об', chapters: 22 }
 ];
 
-export  function App() {
+export default function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
   const [view, setView] = useState('books'); // 'books' або 'chapters'
   const [selections, setSelections] = useState({});
@@ -89,17 +79,24 @@ export  function App() {
 
   const renderBookView = () => (
     <>
-      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
-        <h1 className="text-xl">Книги</h1>
-        <div className="w-12"></div>
-      </div>
       <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
         {booksData.map((book) => {
-          const isStarted = selections[book.name] && selections[book.name].length > 0;
+          const readChapters = selections[book.name] || [];
+          const totalChapters = book.chapters;
+          let borderColorClass = 'border-transparent'; // Стан за замовчуванням
+
+          if (readChapters.length > 0) {
+            if (readChapters.length === totalChapters) {
+              borderColorClass = 'border-green-500'; // Завершено
+            } else {
+              borderColorClass = 'border-orange-500'; // У процесі
+            }
+          }
+
           return (
             <button
               key={book.name}
-              className={`${baseGridItemClasses} ${isStarted ? 'border-green-500' : 'border-transparent'}`}
+              className={`${baseGridItemClasses} ${borderColorClass}`}
               onClick={() => handleBookClick(book)}
             >
               {book.name}
@@ -144,4 +141,4 @@ export  function App() {
   );
 }
 
-export default App;
+
