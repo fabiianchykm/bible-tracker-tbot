@@ -28,28 +28,28 @@ const booksData = [
 
 const DAILY_GOAL = 4;
 
-// Повернено до звичайного оголошення функції
 export function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
-  const [view, setView] = useState('books');
+  const [view, setView] = useState('books'); // 'books', 'chapters', 'settings'
   const [selections, setSelections] = useState({});
   const [dailyReads, setDailyReads] = useState(0);
+  const [showDailyStats, setShowDailyStats] = useState(true);
 
-  // Функція для отримання сьогоднішньої дати у форматі YYYY-MM-DD
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setShowDailyStats(prevShow => !prevShow);
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
   useEffect(() => {
-    // Завантаження загального прогресу
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
-      if (savedSelections) {
-        setSelections(JSON.parse(savedSelections));
-      }
-    } catch (error) {
-      console.error("Failed to parse selections from localStorage", error);
-    }
+      if (savedSelections) setSelections(JSON.parse(savedSelections));
+    } catch (error) { console.error("Failed to parse selections", error); }
     
-    // Завантаження щоденного прогресу
     try {
       const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
       const today = getTodayDateString();
@@ -58,19 +58,14 @@ export function App() {
         if (date === today) {
           setDailyReads(count);
         } else {
-          // Якщо дата не сьогоднішня, скидаємо лічильник
           localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: 0 }));
         }
       } else {
         localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: 0 }));
       }
-    } catch (error) {
-      console.error("Failed to parse daily progress from localStorage", error);
-    }
+    } catch (error) { console.error("Failed to parse daily progress", error); }
 
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.ready();
-    }
+    if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
   }, []);
 
   const handleBookClick = (book) => {
@@ -86,13 +81,12 @@ export function App() {
 
       if (readChapters.includes(chapter)) {
         newReadChapters = readChapters.filter(c => c !== chapter);
-        dailyChange = -1; // Зменшуємо денний лічильник
+        dailyChange = -1;
       } else {
         newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
-        dailyChange = 1; // Збільшуємо денний лічильник
+        dailyChange = 1;
       }
       
-      // Оновлюємо щоденний прогрес
       setDailyReads(currentDailyReads => {
           const newDailyCount = Math.max(0, currentDailyReads + dailyChange);
           const today = getTodayDateString();
@@ -109,17 +103,13 @@ export function App() {
       
       try {
         localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
-      } catch (error) {
-        console.error("Failed to save selections to localStorage", error);
-      }
+      } catch (error) { console.error("Failed to save selections", error); }
 
       return newSelections;
     });
   };
   
-  const handleBackToBooks = () => {
-    setView('books');
-  };
+  const handleBackToBooks = () => setView('books');
 
   const stats = useMemo(() => {
     const totalChapters = booksData.reduce((sum, book) => sum + book.chapters, 0);
@@ -133,37 +123,29 @@ export function App() {
   const renderBookView = () => (
     <>
       <div className="w-full max-w-md flex justify-between items-center text-white mb-2">
-        {/* Оновлений заголовок з денною статистикою */}
-        <p className="text-sm text-gray-400">
-          Сьогодні прочитано: {dailyReads} / {DAILY_GOAL} {dailyReads >= DAILY_GOAL && '✅'}
-        </p>
-        {/* Загальна статистика */}
-        <div className="text-right">
-          <p className="text-sm text-gray-400">
+        <div className="h-5 relative w-48">
+          <p className={`text-sm text-gray-400 absolute transition-opacity duration-500 ${showDailyStats ? 'opacity-100' : 'opacity-0'}`}>
+            Сьогодні: {dailyReads} / {DAILY_GOAL} {dailyReads >= DAILY_GOAL && '✅'}
+          </p>
+          <p className={`text-sm text-gray-400 absolute transition-opacity duration-500 ${!showDailyStats ? 'opacity-100' : 'opacity-0'}`}>
             Всього: {stats.totalReadChapters} ({stats.percentage.toFixed(1)}%)
           </p>
         </div>
+        <button onClick={() => setView('settings')} className="p-1">
+          <svg className="w-6 h-6 text-gray-400 hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </button>
       </div>
       <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
         {booksData.map((book) => {
           const readChapters = selections[book.name] || [];
           const totalChapters = book.chapters;
           let borderColorClass = 'border-transparent';
-
           if (readChapters.length > 0) {
-            if (readChapters.length === totalChapters) {
-              borderColorClass = 'border-green-500'; // Завершено
-            } else {
-              borderColorClass = 'border-orange-500'; // У процесі
-            }
+            if (readChapters.length === totalChapters) borderColorClass = 'border-green-500';
+            else borderColorClass = 'border-orange-500';
           }
-
           return (
-            <button
-              key={book.name}
-              className={`${baseGridItemClasses} ${borderColorClass}`}
-              onClick={() => handleBookClick(book)}
-            >
+            <button key={book.name} className={`${baseGridItemClasses} ${borderColorClass}`} onClick={() => handleBookClick(book)}>
               {book.name}
             </button>
           );
@@ -185,11 +167,7 @@ export function App() {
           {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((chapter) => {
             const isRead = readChapters.includes(chapter);
             return (
-              <button
-                key={chapter}
-                className={`${baseGridItemClasses} border-transparent ${isRead ? 'bg-green-600' : 'bg-zinc-800'}`}
-                onClick={() => handleChapterClick(chapter)}
-              >
+              <button key={chapter} className={`${baseGridItemClasses} border-transparent ${isRead ? 'bg-green-600' : 'bg-zinc-800'}`} onClick={() => handleChapterClick(chapter)}>
                 {chapter}
               </button>
             );
@@ -199,9 +177,24 @@ export function App() {
     );
   };
 
+  const renderSettingsView = () => (
+    <>
+      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+        <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
+        <h1 className="text-xl">Налаштування</h1>
+        <div className="w-12"></div>
+      </div>
+      <div className="w-full max-w-md p-2 text-gray-400 text-center mt-8">
+        <p>Тут будуть налаштування.</p>
+      </div>
+    </>
+  );
+
   return (
     <div className="bg-zinc-900 min-h-screen font-sans flex flex-col items-center p-4">
-      {view === 'books' ? renderBookView() : renderChapterView()}
+      {view === 'books' && renderBookView()}
+      {view === 'chapters' && renderChapterView()}
+      {view === 'settings' && renderSettingsView()}
     </div>
   );
 }
