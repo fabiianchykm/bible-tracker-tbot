@@ -26,14 +26,13 @@ const booksData = [
   { name: '3Ів', chapters: 1 }, { name: 'Юд', chapters: 1 }, { name: 'Об', chapters: 22 }
 ];
 
-const DAILY_GOAL = 4;
-
 export function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
   const [view, setView] = useState('books'); // 'books', 'chapters', 'settings'
   const [selections, setSelections] = useState({});
   const [dailyReads, setDailyReads] = useState(0);
   const [showDailyStats, setShowDailyStats] = useState(true);
+  const [chaptersPerDay, setChaptersPerDay] = useState(4); // Новий стан для налаштувань
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -48,9 +47,10 @@ export function App() {
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
       if (savedSelections) setSelections(JSON.parse(savedSelections));
-    } catch (error) { console.error("Failed to parse selections", error); }
-    
-    try {
+
+      const savedChaptersPerDay = localStorage.getItem('chaptersPerDay');
+      if (savedChaptersPerDay) setChaptersPerDay(Number(savedChaptersPerDay));
+
       const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
       const today = getTodayDateString();
       if (savedDailyProgress) {
@@ -63,7 +63,7 @@ export function App() {
       } else {
         localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, count: 0 }));
       }
-    } catch (error) { console.error("Failed to parse daily progress", error); }
+    } catch (error) { console.error("Failed to parse from localStorage", error); }
 
     if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
   }, []);
@@ -95,11 +95,8 @@ export function App() {
       });
 
       const newSelections = { ...currentSelections };
-      if (newReadChapters.length > 0) {
-        newSelections[activeBook.name] = newReadChapters;
-      } else {
-        delete newSelections[activeBook.name];
-      }
+      if (newReadChapters.length > 0) newSelections[activeBook.name] = newReadChapters;
+      else delete newSelections[activeBook.name];
       
       try {
         localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
@@ -110,6 +107,21 @@ export function App() {
   };
   
   const handleBackToBooks = () => setView('books');
+  
+  const handleChaptersPerDayChange = (e) => {
+      const value = e.target.value;
+      setChaptersPerDay(value);
+      const numValue = Number(value);
+      if (numValue >= 1) {
+          localStorage.setItem('chaptersPerDay', numValue);
+      }
+  };
+
+  const updateChaptersPerDay = (newValue) => {
+      const value = Math.max(1, newValue);
+      setChaptersPerDay(value);
+      localStorage.setItem('chaptersPerDay', value);
+  };
 
   const stats = useMemo(() => {
     const totalChapters = booksData.reduce((sum, book) => sum + book.chapters, 0);
@@ -125,7 +137,7 @@ export function App() {
       <div className="w-full max-w-md flex justify-between items-center text-white mb-2">
         <div className="h-5 relative w-48">
           <p className={`text-sm text-gray-400 absolute transition-opacity duration-500 ${showDailyStats ? 'opacity-100' : 'opacity-0'}`}>
-            Сьогодні: {dailyReads} / {DAILY_GOAL} {dailyReads >= DAILY_GOAL && '✅'}
+            Сьогодні: {dailyReads} / {chaptersPerDay} {dailyReads >= chaptersPerDay && '✅'}
           </p>
           <p className={`text-sm text-gray-400 absolute transition-opacity duration-500 ${!showDailyStats ? 'opacity-100' : 'opacity-0'}`}>
             Всього: {stats.totalReadChapters} ({stats.percentage.toFixed(1)}%)
@@ -177,18 +189,45 @@ export function App() {
     );
   };
 
-  const renderSettingsView = () => (
-    <>
-      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
-        <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
-        <h1 className="text-xl">Налаштування</h1>
-        <div className="w-12"></div>
-      </div>
-      <div className="w-full max-w-md p-2 text-gray-400 text-center mt-8">
-        <p>Тут будуть налаштування.</p>
-      </div>
-    </>
-  );
+  const renderSettingsView = () => {
+    const numChaptersPerDay = Number(chaptersPerDay) || 0;
+    const totalDays = numChaptersPerDay > 0 ? stats.totalChapters / numChaptersPerDay : 0;
+    const years = Math.floor(totalDays / 365);
+    const months = Math.floor((totalDays % 365) / 30);
+    const days = Math.floor((totalDays % 365) % 30);
+    
+    let resultString = '';
+    if (years > 0) resultString += `${years} р. `;
+    if (months > 0) resultString += `${months} міс. `;
+    if (days > 0) resultString += `${days} д.`;
+
+    return (
+      <>
+        <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+          <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
+          <h1 className="text-xl">Налаштування</h1>
+          <div className="w-12"></div>
+        </div>
+        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg">
+            <label className="block mb-4 text-sm font-medium text-center">Розділів на день:</label>
+            <div className="flex items-center justify-center space-x-4">
+                <button onClick={() => updateChaptersPerDay(numChaptersPerDay - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
+                <input 
+                    type="number" 
+                    value={chaptersPerDay}
+                    onChange={handleChaptersPerDayChange}
+                    className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0"
+                />
+                <button onClick={() => updateChaptersPerDay(numChaptersPerDay + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+            </div>
+            <div className="mt-6 text-center">
+                <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
+                <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+            </div>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="bg-zinc-900 min-h-screen font-sans flex flex-col items-center p-4">
