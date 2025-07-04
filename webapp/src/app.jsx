@@ -11,6 +11,7 @@ export function App() {
   const [chaptersPerDay, setChaptersPerDay] = useState(4);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizAnswer, setQuizAnswer] = useState(null);
+  const [isQuizEnabled, setIsQuizEnabled] = useState(true); // Новий стан для налаштувань тесту
 
   useEffect(() => {
     const intervalId = setInterval(() => setShowDailyStats(p => !p), 5000);
@@ -23,8 +24,13 @@ export function App() {
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
       if (savedSelections) setSelections(JSON.parse(savedSelections));
+
       const savedChaptersPerDay = localStorage.getItem('chaptersPerDay');
       if (savedChaptersPerDay) setChaptersPerDay(Number(savedChaptersPerDay));
+      
+      const savedQuizEnabled = localStorage.getItem('isQuizEnabled');
+      if (savedQuizEnabled !== null) setIsQuizEnabled(JSON.parse(savedQuizEnabled));
+
       const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
       const today = getTodayDateString();
       if (savedDailyProgress) {
@@ -72,7 +78,7 @@ export function App() {
       return newSelections;
     });
 
-    if (!isAlreadyRead && quizData[quizKey]) {
+    if (isQuizEnabled && !isAlreadyRead && quizData[quizKey]) {
         setCurrentQuiz(quizData[quizKey]);
         setQuizAnswer(null); 
         setView('quiz');
@@ -96,6 +102,14 @@ export function App() {
 
   const handleQuizAnswer = (option) => {
     setQuizAnswer(option);
+  };
+
+  const handleToggleQuiz = () => {
+    setIsQuizEnabled(currentValue => {
+        const newValue = !currentValue;
+        localStorage.setItem('isQuizEnabled', JSON.stringify(newValue));
+        return newValue;
+    });
   };
 
   const stats = useMemo(() => {
@@ -167,16 +181,29 @@ export function App() {
           <h1 className="text-xl">Налаштування</h1>
           <div className="w-12"></div>
         </div>
-        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg">
-            <label className="block mb-4 text-sm font-medium text-center">Розділів на день:</label>
-            <div className="flex items-center justify-center space-x-4">
-                <button onClick={() => updateChaptersPerDay(numChaptersPerDay - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
-                <input type="number" value={chaptersPerDay} onChange={handleChaptersPerDayChange} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
-                <button onClick={() => updateChaptersPerDay(numChaptersPerDay + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
+            <div>
+                <label className="block mb-4 text-sm font-medium text-center">Розділів на день:</label>
+                <div className="flex items-center justify-center space-x-4">
+                    <button onClick={() => updateChaptersPerDay(numChaptersPerDay - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
+                    <input type="number" value={chaptersPerDay} onChange={handleChaptersPerDayChange} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
+                    <button onClick={() => updateChaptersPerDay(numChaptersPerDay + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+                </div>
+                <div className="mt-6 text-center">
+                    <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
+                    <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+                </div>
             </div>
-            <div className="mt-6 text-center">
-                <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
-                <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+            <div className="border-t border-zinc-700"></div>
+            <div className="flex items-center justify-between pt-2">
+                <label htmlFor="quiz-toggle" className="text-sm font-medium">Контрольні питання</label>
+                <button
+                    id="quiz-toggle"
+                    onClick={handleToggleQuiz}
+                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 ease-in-out ${isQuizEnabled ? 'bg-green-500' : 'bg-zinc-600'}`}
+                >
+                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-300 ease-in-out ${isQuizEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
             </div>
         </div>
       </>
