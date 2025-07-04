@@ -11,7 +11,7 @@ export function App() {
   const [chaptersPerDay, setChaptersPerDay] = useState(4);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizAnswer, setQuizAnswer] = useState(null);
-  const [isQuizEnabled, setIsQuizEnabled] = useState(true); // Новий стан для налаштувань тесту
+  const [isQuizEnabled, setIsQuizEnabled] = useState(true);
 
   useEffect(() => {
     const intervalId = setInterval(() => setShowDailyStats(p => !p), 5000);
@@ -24,13 +24,10 @@ export function App() {
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
       if (savedSelections) setSelections(JSON.parse(savedSelections));
-
       const savedChaptersPerDay = localStorage.getItem('chaptersPerDay');
       if (savedChaptersPerDay) setChaptersPerDay(Number(savedChaptersPerDay));
-      
       const savedQuizEnabled = localStorage.getItem('isQuizEnabled');
       if (savedQuizEnabled !== null) setIsQuizEnabled(JSON.parse(savedQuizEnabled));
-
       const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
       const today = getTodayDateString();
       if (savedDailyProgress) {
@@ -52,7 +49,6 @@ export function App() {
   const handleChapterClick = (chapter) => {
     const quizKey = `${activeBook.name}-${chapter}`;
     const isAlreadyRead = selections[activeBook.name]?.includes(chapter);
-
     setSelections(currentSelections => {
       const readChapters = currentSelections[activeBook.name] || [];
       let newReadChapters;
@@ -77,7 +73,6 @@ export function App() {
       } catch (error) { console.error("Failed to save selections", error); }
       return newSelections;
     });
-
     if (isQuizEnabled && !isAlreadyRead && quizData[quizKey]) {
         setCurrentQuiz(quizData[quizKey]);
         setQuizAnswer(null); 
@@ -110,6 +105,29 @@ export function App() {
         localStorage.setItem('isQuizEnabled', JSON.stringify(newValue));
         return newValue;
     });
+  };
+
+  const handlePayment = async () => {
+    console.log("Attempting to open invoice...");
+    if (window.Telegram?.WebApp) {
+      try {
+        // УВАГА: Це демонстрація. У реальному додатку 'invoiceSlug' генерується
+        // на вашому бекенді після створення рахунку через платіжний провайдер та Bot API.
+        const invoiceSlug = 'test-invoice-slug'; // ЗАМІНИТИ НА РЕАЛЬНИЙ SLUG
+        window.Telegram.WebApp.openInvoice(invoiceSlug, (status) => {
+          if (status === 'paid') {
+            window.Telegram.WebApp.showAlert('Дякуємо за вашу підтримку!');
+            window.Telegram.WebApp.close();
+          } else {
+            window.Telegram.WebApp.showAlert(`Статус платежу: ${status}`);
+          }
+        });
+      } catch (error) {
+        window.Telegram.WebApp.showAlert('Не вдалося відкрити вікно оплати.');
+      }
+    } else {
+      alert("Це тестова оплата. У реальному додатку тут відкриється вікно оплати Telegram.");
+    }
   };
 
   const stats = useMemo(() => {
@@ -181,29 +199,35 @@ export function App() {
           <h1 className="text-xl">Налаштування</h1>
           <div className="w-12"></div>
         </div>
-        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
-            <div>
-                <label className="block mb-4 text-sm font-medium text-center">Розділів на день:</label>
-                <div className="flex items-center justify-center space-x-4">
-                    <button onClick={() => updateChaptersPerDay(numChaptersPerDay - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
-                    <input type="number" value={chaptersPerDay} onChange={handleChaptersPerDayChange} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
-                    <button onClick={() => updateChaptersPerDay(numChaptersPerDay + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg">
+            <div className="space-y-6">
+                <div>
+                    <label className="block mb-4 text-sm font-medium text-center">Розділів на день:</label>
+                    <div className="flex items-center justify-center space-x-4">
+                        <button onClick={() => updateChaptersPerDay(numChaptersPerDay - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
+                        <input type="number" value={chaptersPerDay} onChange={handleChaptersPerDayChange} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
+                        <button onClick={() => updateChaptersPerDay(numChaptersPerDay + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+                    </div>
+                    <div className="mt-6 text-center">
+                        <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
+                        <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+                    </div>
                 </div>
-                <div className="mt-6 text-center">
-                    <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
-                    <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+                <div className="border-t border-zinc-700"></div>
+                <div className="flex items-center justify-between pt-2">
+                    <label htmlFor="quiz-toggle" className="text-sm font-medium">Контрольні питання</label>
+                    <button id="quiz-toggle" onClick={handleToggleQuiz} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 ease-in-out ${isQuizEnabled ? 'bg-green-500' : 'bg-zinc-600'}`}>
+                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-300 ease-in-out ${isQuizEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
                 </div>
             </div>
-            <div className="border-t border-zinc-700"></div>
-            <div className="flex items-center justify-between pt-2">
-                <label htmlFor="quiz-toggle" className="text-sm font-medium">Контрольні питання</label>
-                <button
-                    id="quiz-toggle"
-                    onClick={handleToggleQuiz}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 ease-in-out ${isQuizEnabled ? 'bg-green-500' : 'bg-zinc-600'}`}
-                >
-                    <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-300 ease-in-out ${isQuizEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            <div className="mt-8 pt-4 border-t border-zinc-700 flex justify-between items-center">
+                <button onClick={handlePayment} className="text-xs text-gray-500 underline hover:text-gray-400">
+                    Підтримати проект
                 </button>
+                <a href="https://t.me/i1iiii1i1" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 underline hover:text-gray-400">
+                    Написати у підтримку
+                </a>
             </div>
         </div>
       </>
@@ -220,19 +244,11 @@ export function App() {
     };
     return (
       <div className="fixed inset-0 bg-black/50 flex items-end z-50 p-4" onClick={() => setView('chapters')}>
-        <div 
-          onClick={(e) => e.stopPropagation()} 
-          className="w-full max-w-md mx-auto bg-zinc-900/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg slide-up-animation"
-        >
+        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md mx-auto bg-zinc-900/80 backdrop-blur-lg rounded-2xl p-4 shadow-lg slide-up-animation">
           <h2 className="text-lg font-semibold mb-4 text-center text-white">{currentQuiz.question}</h2>
           <div className="grid grid-cols-2 gap-3 mb-4">
             {currentQuiz.options.map(option => (
-              <button 
-                key={option}
-                onClick={() => handleQuizAnswer(option)}
-                disabled={!!quizAnswer}
-                className={`p-4 rounded-lg text-center text-white transition-colors ${getButtonClass(option)}`}
-              >
+              <button key={option} onClick={() => handleQuizAnswer(option)} disabled={!!quizAnswer} className={`p-4 rounded-lg text-center text-white transition-colors ${getButtonClass(option)}`}>
                 {option}
               </button>
             ))}
