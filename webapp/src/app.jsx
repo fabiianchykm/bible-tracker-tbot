@@ -99,6 +99,17 @@ export function App() {
     setView('quizList');
   };
 
+  const handleShowAllQuizzes = () => {
+    const allQuizzes = Object.entries(quizData);
+    if (allQuizzes.length === 0) {
+        alert("Наразі немає доступних питань.");
+        return;
+    }
+    setQuizList(allQuizzes);
+    setQuizListTitle('Усі питання');
+    setView('quizList');
+  };
+
   const handleShowTodaysQuizzes = () => {
     const todaysQuizzes = Object.entries(quizData).filter(([key]) => todaysReadChapters.includes(key));
     if (todaysQuizzes.length === 0) {
@@ -226,10 +237,11 @@ export function App() {
           <h1 className="text-xl">Питання по Біблії</h1>
           <div className="w-12"></div>
         </div>
-        <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-4">
-            <button onClick={() => setView('quizBookSelection')} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">По книгах</button>
-            <button onClick={handleShowRandomQuiz} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Рандомні питання</button>
-            <button onClick={handleShowTodaysQuizzes} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Із прочитаного сьогодні</button>
+        <div className="w-full text-gray-300 space-y-4">
+            <button onClick={() => setView('quizBookSelection')} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По книгах</button>
+            <button onClick={handleShowAllQuizzes} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По розділах</button>
+            <button onClick={handleShowRandomQuiz} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">Рандомні питання</button>
+            <button onClick={handleShowTodaysQuizzes} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">Із прочитаного сьогодні</button>
         </div>
     </>
   );
@@ -301,7 +313,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(180deg, rgba(255, 235, 120, 1) 0%, rgba(253, 250, 235, 1) 21%, rgba(253, 250, 235, 1) 100%)'}}>
+    <div className="min-h-screen" style={{background: 'linear-gradient(180deg, rgba(13, 119, 228, 1) 0%, rgba(79, 161, 233, 1) 11%, rgba(255, 255, 255, 1) 100%)'}}>
         <div className="pt-28">
             <div className="bg-zinc-900 rounded-t-[2.5rem] min-h-[calc(100vh-7rem)] p-4">
                 <div className="w-full max-w-md mx-auto">
