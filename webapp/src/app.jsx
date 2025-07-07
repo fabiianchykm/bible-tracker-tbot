@@ -131,15 +131,23 @@ export function App() {
 
   const renderBookView = () => (
     <>
-      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
-        <button onClick={() => setView('dailyGoal')} className="h-5 relative w-48 text-left">
-          <p className="text-sm text-gray-400">Сьогодні: {todaysReadChapters.length} / {chaptersPerDay} {todaysReadChapters.length >= chaptersPerDay && '✅'}</p>
+      <div className="w-full flex justify-between items-center text-white mb-4">
+        <button 
+            onClick={() => setView('dailyGoal')} 
+            className="flex items-center space-x-2 bg-zinc-800 rounded-full px-4 py-2 text-sm font-medium border border-zinc-700 hover:bg-zinc-700 transition-colors"
+        >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span>Статистика</span>
         </button>
-        <button onClick={() => setView('quizHome')} className="p-1">
-            <svg className="w-6 h-6 text-gray-400 hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <button 
+            onClick={() => setView('quizHome')} 
+            className="flex items-center space-x-2 bg-zinc-800 rounded-full px-4 py-2 text-sm font-medium border border-zinc-700 hover:bg-zinc-700 transition-colors"
+        >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>Питання</span>
         </button>
       </div>
-      <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
+      <div className="grid grid-cols-6 gap-2 w-full">
         {booksData.map((book) => {
           const readChapters = selections[book.name] || [];
           const totalChapters = book.chapters;
@@ -158,12 +166,12 @@ export function App() {
     const readChapters = selections[activeBook.name] || [];
     return (
       <>
-        <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+        <div className="w-full flex justify-between items-center text-white mb-4">
           <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('books')}>&lt; Назад</button>
           <h1 className="text-xl">{activeBook.name}</h1>
           <div className="w-12"></div>
         </div>
-        <div className="grid grid-cols-6 gap-2 w-full max-w-md p-2">
+        <div className="grid grid-cols-6 gap-2 w-full">
           {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((chapter) => {
             const isRead = selections[activeBook.name]?.includes(chapter);
             return (<button key={chapter} className={`${baseGridItemClasses} border-transparent ${isRead ? 'bg-green-600' : 'bg-zinc-800'}`} onClick={() => handleChapterClick(chapter)}>{chapter}</button>);
@@ -185,13 +193,14 @@ export function App() {
     if (days > 0) resultString += `${days} д.`;
     return (
       <>
-        <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+        <div className="w-full flex justify-between items-center text-white mb-4">
           <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
           <h1 className="text-xl">Статистика та ціль</h1>
           <div className="w-12"></div>
         </div>
-        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
+        <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
             <div>
+              <p className="text-center text-gray-400">Сьогодні прочитано: <span className="font-bold text-white">{todaysReadChapters.length} / {chaptersPerDay}</span> {todaysReadChapters.length >= chaptersPerDay && '✅'}</p>
               <p className="text-center text-gray-400">Загальний прогрес: <span className="font-bold text-white">{stats.totalReadChapters} / {stats.totalChapters} ({stats.percentage.toFixed(1)}%)</span></p>
             </div>
             <div className="border-t border-zinc-700"></div>
@@ -212,12 +221,12 @@ export function App() {
 
   const renderQuizHomeView = () => (
     <>
-        <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+        <div className="w-full flex justify-between items-center text-white mb-4">
           <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
           <h1 className="text-xl">Питання по Біблії</h1>
           <div className="w-12"></div>
         </div>
-        <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-4">
+        <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-4">
             <button onClick={() => setView('quizBookSelection')} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">По книгах</button>
             <button onClick={handleShowRandomQuiz} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Рандомні питання</button>
             <button onClick={handleShowTodaysQuizzes} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Із прочитаного сьогодні</button>
@@ -229,12 +238,12 @@ export function App() {
     const booksWithQuizzes = [...new Set(Object.keys(quizData).map(key => key.split('-')[0]))];
     return (
         <>
-            <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+            <div className="w-full flex justify-between items-center text-white mb-4">
               <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('quizHome')}>&lt; Назад</button>
               <h1 className="text-xl">Вибір книги</h1>
               <div className="w-12"></div>
             </div>
-            <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
+            <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
               {booksWithQuizzes.length > 0 ? booksWithQuizzes.map(bookName => (
                   <button key={bookName} onClick={() => handleShowQuizzesForBook(bookName)} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">
                       {bookName}
@@ -247,12 +256,12 @@ export function App() {
 
   const renderQuizListView = () => (
     <>
-      <div className="w-full max-w-md flex justify-between items-center text-white mb-4">
+      <div className="w-full flex justify-between items-center text-white mb-4">
         <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('quizHome')}>&lt; Назад</button>
         <h1 className="text-xl">{quizListTitle}</h1>
         <div className="w-12"></div>
       </div>
-      <div className="w-full max-w-md p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
+      <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
         {quizList.length > 0 ? quizList.map(([key, value]) => (
             <button key={key} onClick={() => handleStartSpecificQuiz(key)} className="w-full text-left p-3 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">
                 {value.title}
@@ -292,7 +301,20 @@ export function App() {
   };
 
   return (
-    <div className="bg-zinc-900 min-h-screen font-sans flex flex-col items-center p-4">
+    <div className="min-h-screen" style={{background: 'linear-gradient(180deg, rgba(255, 235, 120, 1) 0%, rgba(253, 250, 235, 1) 21%, rgba(253, 250, 235, 1) 100%)'}}>
+        <div className="pt-28">
+            <div className="bg-zinc-900 rounded-t-[2.5rem] min-h-[calc(100vh-7rem)] p-4">
+                <div className="w-full max-w-md mx-auto">
+                    {view === 'books' && renderBookView()}
+                    {view === 'chapters' && renderChapterView()}
+                    {view === 'dailyGoal' && renderDailyGoalView()}
+                    {view === 'quizHome' && renderQuizHomeView()}
+                    {view === 'quizBookSelection' && renderQuizBookSelectionView()}
+                    {view === 'quizList' && renderQuizListView()}
+                </div>
+                {view === 'quiz' && renderQuizView()}
+            </div>
+        </div>
       <style>{`
         @keyframes slide-up {
           from { transform: translateY(100%); }
@@ -302,15 +324,6 @@ export function App() {
           animation: slide-up 0.3s ease-out;
         }
       `}</style>
-      <div className="w-full max-w-md">
-        {view === 'books' && renderBookView()}
-        {view === 'chapters' && renderChapterView()}
-        {view === 'dailyGoal' && renderDailyGoalView()}
-        {view === 'quizHome' && renderQuizHomeView()}
-        {view === 'quizBookSelection' && renderQuizBookSelectionView()}
-        {view === 'quizList' && renderQuizListView()}
-      </div>
-      {view === 'quiz' && renderQuizView()}
     </div>
   );
 }
