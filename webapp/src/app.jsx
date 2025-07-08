@@ -307,10 +307,12 @@ export function App() {
           <div className="w-24"></div>
         </div>
         <div className="w-full text-gray-300 space-y-4">
-            <button onClick={() => setView('quizBookSelection')} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По книгах</button>
-            <button onClick={handleShowAllQuizzes} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По розділах</button>
-            <button onClick={handleShowRandomQuiz} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">Рандомні питання</button>
             <button onClick={handleShowTodaysQuizzes} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">Із прочитаного сьогодні</button>
+            <button onClick={handleShowRandomQuiz} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">Рандомні питання</button>
+            <div className="flex space-x-4">
+                <button onClick={() => setView('quizBookSelection')} className="w-1/2 text-center p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По книгах</button>
+                <button onClick={handleShowAllQuizzes} className="w-1/2 text-center p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По розділах</button>
+            </div>
         </div>
     </>
   );
