@@ -1,12 +1,63 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { booksData, quizData } from './data.js'; // Імпортуємо дані
+const ActivityCalendar = ({ history, goal, startDate: startDateString }) => {
+    if (!startDateString) {
+        return <p className="text-center text-gray-500 text-xs">Історія читання порожня.</p>;
+    }
 
+    const endDate = new Date();
+    const startDate = new Date(startDateString);
+    
+    const days = [];
+    let currentDate = new Date(startDate);
+
+    const dayOfWeek = startDate.getDay(); 
+    for (let i = 0; i < dayOfWeek; i++) {
+        days.push({ key: `pad-start-${i}`, type: 'pad' });
+    }
+
+    while (currentDate <= endDate) {
+        days.push({ key: currentDate.toISOString().split('T')[0], type: 'day', date: new Date(currentDate) });
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const weekdays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    return (
+        <div className="w-full">
+            <div className="grid grid-cols-7 gap-1.5 mb-1">
+                {weekdays.map(wd => <div key={wd} className="text-xs text-center text-gray-500">{wd}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1.5">
+                {days.map(dayInfo => {
+                    if (dayInfo.type === 'pad') {
+                        return <div key={dayInfo.key} className="w-3.5 h-3.5 rounded-sm"></div>;
+                    }
+                    
+                    const dateString = dayInfo.key;
+                    const count = history[dateString] || 0;
+                    let colorClass = 'bg-zinc-700';
+                    if (count > 0) {
+                        colorClass = count >= goal ? 'bg-green-500' : 'bg-red-500';
+                    }
+                    return (
+                        <div 
+                            key={dateString} 
+                            className={`w-3.5 h-3.5 rounded-sm ${colorClass}`}
+                            title={`${dateString}: ${count} розділів`}
+                        ></div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 export function App() {
   const [activeBook, setActiveBook] = useState(booksData[0]); 
-  const [view, setView] = useState('books'); // 'books', 'chapters', 'quiz', 'dailyGoal', 'quizHome', 'quizBookSelection', 'quizList'
+  const [view, setView] = useState('books');
   const [selections, setSelections] = useState({});
-  const [todaysReadChapters, setTodaysReadChapters] = useState([]);
+  const [readingHistory, setReadingHistory] = useState({});
   const [chaptersPerDay, setChaptersPerDay] = useState(4);
   const [currentQuiz, setCurrentQuiz] = useState(null);
   const [quizAnswer, setQuizAnswer] = useState(null);
@@ -19,20 +70,13 @@ export function App() {
     try {
       const savedSelections = localStorage.getItem('bibleReadChapters');
       if (savedSelections) setSelections(JSON.parse(savedSelections));
+      
       const savedChaptersPerDay = localStorage.getItem('chaptersPerDay');
       if (savedChaptersPerDay) setChaptersPerDay(Number(savedChaptersPerDay));
-      const savedDailyProgress = localStorage.getItem('bibleDailyProgress');
-      const today = getTodayDateString();
-      if (savedDailyProgress) {
-        const { date, chapters } = JSON.parse(savedDailyProgress);
-        if (date === today) {
-          setTodaysReadChapters(chapters || []);
-        } else {
-          localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, chapters: [] }));
-        }
-      } else {
-        localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: today, chapters: [] }));
-      }
+
+      const savedHistory = localStorage.getItem('bibleReadingHistory');
+      if (savedHistory) setReadingHistory(JSON.parse(savedHistory));
+
     } catch (error) { console.error("Failed to parse from localStorage", error); }
     if (window.Telegram?.WebApp) window.Telegram.WebApp.ready();
   }, []);
@@ -43,31 +87,34 @@ export function App() {
   };
 
   const handleChapterClick = (chapter) => {
-    const chapterKey = `${activeBook.name}-${chapter}`;
     setSelections(currentSelections => {
       const readChapters = currentSelections[activeBook.name] || [];
+      const isAlreadyRead = readChapters.includes(chapter);
       let newReadChapters;
-      if (readChapters.includes(chapter)) {
+      
+      const today = getTodayDateString();
+      setReadingHistory(currentHistory => {
+          const todayCount = currentHistory[today] || 0;
+          const newCount = isAlreadyRead ? todayCount - 1 : todayCount + 1;
+          const newHistory = { ...currentHistory, [today]: Math.max(0, newCount) };
+          localStorage.setItem('bibleReadingHistory', JSON.stringify(newHistory));
+          return newHistory;
+      });
+
+      if (isAlreadyRead) {
         newReadChapters = readChapters.filter(c => c !== chapter);
-        setTodaysReadChapters(prev => {
-            const updated = prev.filter(key => key !== chapterKey);
-            localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: getTodayDateString(), chapters: updated }));
-            return updated;
-        });
       } else {
         newReadChapters = [...readChapters, chapter].sort((a, b) => a - b);
-        setTodaysReadChapters(prev => {
-            const updated = [...new Set([...prev, chapterKey])];
-            localStorage.setItem('bibleDailyProgress', JSON.stringify({ date: getTodayDateString(), chapters: updated }));
-            return updated;
-        });
       }
+      
       const newSelections = { ...currentSelections };
       if (newReadChapters.length > 0) newSelections[activeBook.name] = newReadChapters;
       else delete newSelections[activeBook.name];
+      
       try {
         localStorage.setItem('bibleReadChapters', JSON.stringify(newSelections));
       } catch (error) { console.error("Failed to save selections", error); }
+      
       return newSelections;
     });
   };
@@ -111,7 +158,10 @@ export function App() {
   };
 
   const handleShowTodaysQuizzes = () => {
-    const todaysQuizzes = Object.entries(quizData).filter(([key]) => todaysReadChapters.includes(key));
+    const today = getTodayDateString();
+    const todaysChaptersKeys = Object.keys(readingHistory[today] || {});
+    const todaysQuizzes = Object.entries(quizData).filter(([key]) => todaysChaptersKeys.includes(key));
+
     if (todaysQuizzes.length === 0) {
         alert("Ви ще не прочитали розділи, по яких є питання, за сьогодні.");
         return;
@@ -138,7 +188,20 @@ export function App() {
     return { totalChapters, totalReadChapters, percentage };
   }, [selections]);
 
+  const firstReadingDate = useMemo(() => {
+    const dates = Object.keys(readingHistory);
+    if (dates.length === 0) return null;
+    return dates.sort()[0];
+  }, [readingHistory]);
+
   const baseGridItemClasses = "aspect-square flex items-center justify-center rounded-lg border-2 bg-zinc-800 text-white cursor-pointer transition-all duration-200 hover:bg-zinc-700 active:scale-95";
+
+  const BackButton = ({ onClick }) => (
+    <button onClick={onClick} className="flex items-center space-x-1 bg-zinc-800 rounded-full px-3 py-1.5 text-sm font-medium border border-zinc-700 hover:bg-zinc-700 transition-colors">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span>Назад</span>
+    </button>
+  );
 
   const renderBookView = () => (
     <>
@@ -178,9 +241,9 @@ export function App() {
     return (
       <>
         <div className="w-full flex justify-between items-center text-white mb-4">
-          <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('books')}>&lt; Назад</button>
+          <BackButton onClick={() => setView('books')} />
           <h1 className="text-xl">{activeBook.name}</h1>
-          <div className="w-12"></div>
+          <div className="w-24"></div>
         </div>
         <div className="grid grid-cols-6 gap-2 w-full">
           {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((chapter) => {
@@ -205,25 +268,31 @@ export function App() {
     return (
       <>
         <div className="w-full flex justify-between items-center text-white mb-4">
-          <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
+          <BackButton onClick={handleBackToBooks} />
           <h1 className="text-xl">Статистика та ціль</h1>
-          <div className="w-12"></div>
+          <div className="w-24"></div>
         </div>
-        <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
-            <div>
-              <p className="text-center text-gray-400">Сьогодні прочитано: <span className="font-bold text-white">{todaysReadChapters.length} / {chaptersPerDay}</span> {todaysReadChapters.length >= chaptersPerDay && '✅'}</p>
-              <p className="text-center text-gray-400">Загальний прогрес: <span className="font-bold text-white">{stats.totalReadChapters} / {stats.totalChapters} ({stats.percentage.toFixed(1)}%)</span></p>
+        <div className="w-full space-y-4">
+            <div className="p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-6">
+                <div>
+                  <p className="text-center text-gray-400">Сьогодні прочитано: <span className="font-bold text-white">{readingHistory[getTodayDateString()] || 0} / {chaptersPerDay}</span> {(readingHistory[getTodayDateString()] || 0) >= chaptersPerDay && '✅'}</p>
+                  <p className="text-center text-gray-400">Загальний прогрес: <span className="font-bold text-white">{stats.totalReadChapters} / {stats.totalChapters} ({stats.percentage.toFixed(1)}%)</span></p>
+                </div>
+                <div className="border-t border-zinc-700"></div>
+                <label className="block mb-4 text-sm font-medium text-center">Змінити денну ціль:</label>
+                <div className="flex items-center justify-center space-x-4">
+                    <button onClick={() => updateChaptersPerDay(Number(chaptersPerDay) - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
+                    <input type="number" value={chaptersPerDay} onChange={(e) => setChaptersPerDay(e.target.value)} onBlur={(e) => updateChaptersPerDay(Number(e.target.value))} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
+                    <button onClick={() => updateChaptersPerDay(Number(chaptersPerDay) + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
+                </div>
+                <div className="mt-6 text-center">
+                    <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
+                    <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+                </div>
             </div>
-            <div className="border-t border-zinc-700"></div>
-            <label className="block mb-4 text-sm font-medium text-center">Змінити денну ціль:</label>
-            <div className="flex items-center justify-center space-x-4">
-                <button onClick={() => updateChaptersPerDay(Number(chaptersPerDay) - 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">-</button>
-                <input type="number" value={chaptersPerDay} onChange={(e) => setChaptersPerDay(e.target.value)} onBlur={(e) => updateChaptersPerDay(Number(e.target.value))} className="bg-transparent text-white text-4xl font-bold w-24 text-center focus:outline-none p-0" />
-                <button onClick={() => updateChaptersPerDay(Number(chaptersPerDay) + 1)} className="w-12 h-12 text-2xl font-bold text-white bg-zinc-700 rounded-full flex items-center justify-center hover:bg-zinc-600 transition-colors active:scale-95">+</button>
-            </div>
-            <div className="mt-6 text-center">
-                <p className="text-gray-400">При такому темпі ви прочитаєте Біблію за:</p>
-                <p className="text-lg font-bold text-white mt-1">{resultString.trim() || 'Введіть кількість'}</p>
+            <div className="p-4 text-gray-300 bg-zinc-800 rounded-lg">
+                <h3 className="text-center text-sm font-medium mb-2">Активність читання</h3>
+                <ActivityCalendar history={readingHistory} goal={chaptersPerDay} startDate={firstReadingDate} />
             </div>
         </div>
       </>
@@ -233,9 +302,9 @@ export function App() {
   const renderQuizHomeView = () => (
     <>
         <div className="w-full flex justify-between items-center text-white mb-4">
-          <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={handleBackToBooks}>&lt; Назад</button>
+          <BackButton onClick={handleBackToBooks} />
           <h1 className="text-xl">Питання по Біблії</h1>
-          <div className="w-12"></div>
+          <div className="w-24"></div>
         </div>
         <div className="w-full text-gray-300 space-y-4">
             <button onClick={() => setView('quizBookSelection')} className="w-full text-left p-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors">По книгах</button>
@@ -251,9 +320,9 @@ export function App() {
     return (
         <>
             <div className="w-full flex justify-between items-center text-white mb-4">
-              <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('quizHome')}>&lt; Назад</button>
+              <BackButton onClick={() => setView('quizHome')} />
               <h1 className="text-xl">Вибір книги</h1>
-              <div className="w-12"></div>
+              <div className="w-24"></div>
             </div>
             <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
               {booksWithQuizzes.length > 0 ? booksWithQuizzes.map(bookName => (
@@ -269,9 +338,9 @@ export function App() {
   const renderQuizListView = () => (
     <>
       <div className="w-full flex justify-between items-center text-white mb-4">
-        <button className="bg-transparent border-none text-blue-500 text-lg font-bold cursor-pointer" onClick={() => setView('quizHome')}>&lt; Назад</button>
+        <BackButton onClick={() => setView('quizHome')} />
         <h1 className="text-xl">{quizListTitle}</h1>
-        <div className="w-12"></div>
+        <div className="w-24"></div>
       </div>
       <div className="w-full p-4 text-gray-300 bg-zinc-800 rounded-lg space-y-2">
         {quizList.length > 0 ? quizList.map(([key, value]) => (
@@ -313,7 +382,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(180deg, rgba(13, 119, 228, 1) 0%, rgba(79, 161, 233, 1) 11%, rgba(255, 255, 255, 1) 100%)'}}>
+    <div className="min-h-screen" style={{background: 'linear-gradient(180deg,rgba(13, 119, 228, 1) 0%, rgba(79, 161, 233, 1) 11%, rgba(255, 255, 255, 1) 100%)'}}>
         <div className="pt-28">
             <div className="bg-zinc-900 rounded-t-[2.5rem] min-h-[calc(100vh-7rem)] p-4">
                 <div className="w-full max-w-md mx-auto">
